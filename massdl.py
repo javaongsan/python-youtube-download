@@ -275,49 +275,56 @@ class YouTube(object):
         return videoinfo
 
     def _get_video_info(self):
-        """
-        This is responsable for executing the request, extracting the
-        necessary details, and populating the different video
-        resolutions and formats into a list.
-        """
-        querystring = urlencode({'asv': 3, 'el': 'detailpage', 'hl': 'en_US',
-                                 'video_id': self.video_id})
+        try:
+            """
+            This is responsable for executing the request, extracting the
+            necessary details, and populating the different video
+            resolutions and formats into a list.
+            """
+            querystring = urlencode({'asv': 3, 'el': 'detailpage', 'hl': 'en_US',
+                                     'video_id': self.video_id})
 
-        self.title = None
-        self.videos = []
+            self.title = None
+            self.videos = []
 
-        response = urlopen(YT_BASE_URL + '?' + querystring)
+            response = urlopen(YT_BASE_URL + '?' + querystring)
 
-        if response:
-            content = response.read().decode()
-            data = parse_qs(content)
-            if 'errorcode' in data:
-                error = data.get('reason', 'An unknown error has occurred')
-                if isinstance(error, list):
-                    error = error.pop()
-                print error
-                raise YouTubeError(error)
+            if response:
+                content = response.read().decode()
+                data = parse_qs(content)
+                if 'errorcode' in data:
+                    error = data.get('reason', 'An unknown error has occurred')
+                    if isinstance(error, list):
+                        error = error.pop()
+                    print error
+                    raise YouTubeError(error)
 
-            stream_map = self._parse_stream_map(data)
-            video_urls = stream_map["url"]
-            #Get the video signatures, YouTube require them as an url component
-            video_signatures = stream_map["sig"]
-            self.title = self._fetch(('title',), content)
+                stream_map = self._parse_stream_map(data)
+                video_urls = stream_map["url"]
+                video_signatures = stream_map["sig"]
+                self.title = self._fetch(('title',), content)
 
-            for idx in range(len(video_urls)):
-                url = video_urls[idx]
-                signature = video_signatures[idx]
-                try:
-                    fmt, data = self._extract_fmt(url)
-                except (TypeError, KeyError):
-                    pass
-                else:
-                    #Add video signature to url
-                    url = "%s&signature=%s" % (url, signature)
-                    v = Video(url, self.filename, **data)
-                    self.videos.append(v)
-                    self._fmt_values.append(fmt)
-            self.videos.sort()
+                for idx in range(len(video_urls)):
+                    url = video_urls[idx]
+                    signature = None
+                    try:
+                        signature = video_signatures[idx]
+                    except Exception, e:
+                        pass
+
+                    try:
+                        fmt, data = self._extract_fmt(url)
+                    except (TypeError, KeyError):
+                        pass
+                    else:
+                        #Add video signature to url
+                        url = "%s&signature=%s" % (url, signature)
+                        v = Video(url, self.filename, **data)
+                        self.videos.append(v)
+                        self._fmt_values.append(fmt)
+                self.videos.sort()
+        except:
+            raise
 
     def _extract_fmt(self, text):
         """
@@ -348,7 +355,8 @@ def main():
     for line in lines:
         yt.url=line.strip()
         video = yt.get('mp4')
-        video.download()
+        if video:
+            video.download()
     
     os.system("say all video downloaded sir");
 
