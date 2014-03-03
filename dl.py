@@ -301,13 +301,17 @@ class YouTube(object):
 
                 stream_map = self._parse_stream_map(data)
                 video_urls = stream_map["url"]
-                #Get the video signatures, YouTube require them as an url component
                 video_signatures = stream_map["sig"]
                 self.title = self._fetch(('title',), content)
 
                 for idx in range(len(video_urls)):
                     url = video_urls[idx]
-                    signature = video_signatures[idx]
+                    signature = None
+                    try:
+                        signature = video_signatures[idx]
+                    except Exception, e:
+                        pass
+
                     try:
                         fmt, data = self._extract_fmt(url)
                     except (TypeError, KeyError):
@@ -320,7 +324,7 @@ class YouTube(object):
                         self._fmt_values.append(fmt)
                 self.videos.sort()
         except:
-            print "Unexpected error:", sys.exc_info()[0]
+            raise
 
     def _extract_fmt(self, text):
         """
