@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from __future__ import unicode_literals
 from urllib import urlencode
 from urllib2 import urlopen
@@ -9,6 +12,7 @@ import os
 from os.path import normpath
 from utils import safe_filename
 from video import Video
+import urllib2,cookielib
 
 class Video(object):
     """
@@ -26,6 +30,7 @@ class Video(object):
         """
 
         self.url = url
+        # self.filename = safe_filename(filename)
         self.filename = filename
         self.__dict__.update(**attributes)
 
@@ -48,7 +53,8 @@ class Video(object):
         """
 
         path = (normpath(path) + '/' if path else '')
-        fullpath = '%s%s.%s' % (path, self.filename, self.extension)
+        fullpath = path+self.filename.decode("utf-8")+"."+self.extension
+        
         response = urlopen(self.url)
         with open(fullpath, 'wb') as dst_file:
             meta_data = dict(response.info().items())
@@ -150,7 +156,7 @@ class YouTube(object):
         generated based on the name of the video.
         """
         if not self._filename:
-            self._filename = safe_filename(self.title)
+            self._filename = self.title
         return self._filename
 
     @filename.setter
@@ -302,7 +308,13 @@ class YouTube(object):
                 stream_map = self._parse_stream_map(data)
                 video_urls = stream_map["url"]
                 video_signatures = stream_map["sig"]
-                self.title = self._fetch(('title',), content)
+                tmptitle = self._fetch(('title',), content)
+                # entitle = tmptitle.decode("ISO-8859-1")
+                # entitle = tmptitle.decode("utf-8")
+                entitle = tmptitle.encode("ISO-8859-1")
+                # entitle = entitle.encode("utf-8")
+                self.title = entitle
+           
 
                 for idx in range(len(video_urls)):
                     url = video_urls[idx]
@@ -348,16 +360,14 @@ class YouTube(object):
 def main():
     yt = YouTube()
     yt.url=raw_input("Enter the youtube url\n")   
-    Convert=raw_input("Convert to mp3? (y/n)\n") 
+    Convert=raw_input("Convert to mp3? (y/n)\n")
     video = yt.get('mp4')
     video.download()
     if Convert == "y":
-        cmd='~/git/python-youtube-download/ffmpeg -ac 2 -ab 128k -i u"' + yt._filename + '" u"' + yt.title +'.mp3"'    
-        os.system(cmd);
-        cmd='rm -f "' + yt.title + '.mp4"'    
-        os.system(cmd);
+        cmd="~/git/python-youtube-download/ffmpeg -ac 2 -ab 192k -vn -i '" + yt._filename.decode("utf-8")+ ".mp4' '" + yt._filename.decode("utf-8") + ".mp3' "    
+        os.system(cmd.encode("utf-8"));
+    cmd='rm -f "' + yt._filename.decode("utf-8") + '.mp4"'    
+    os.system(cmd.encode("utf-8"));
 
-        
 if __name__ == "__main__":
     main()
-    
